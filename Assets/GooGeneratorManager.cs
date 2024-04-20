@@ -191,6 +191,23 @@ public class GooGeneratorManager : MonoBehaviour
 
     private string jsonDataPath;
 
+    [Serializable]
+    private class SerializableRequirementsData
+    {
+        public long gooCount;
+
+        public long milking_Level;
+        public long milking_genCount;
+        public float milking_genRate;
+        public long lab_Level;
+        public long lab_genCount;
+        public float lab_genRate;
+
+        public long gpcLevel;
+        public long gpcCount;
+
+        public long droneCount;
+    }
 
     private void Awake()
     {
@@ -234,7 +251,6 @@ public class GooGeneratorManager : MonoBehaviour
             SaveData();
         }
     }
-
     private void SaveData()
     {
         // Create a serializable object to hold the data
@@ -261,24 +277,6 @@ public class GooGeneratorManager : MonoBehaviour
         File.WriteAllText(jsonDataPath, jsonData);
 
         Debug.Log("Saved Data!");
-    }
-
-    [Serializable]
-    private class SerializableRequirementsData
-    {
-        public long gooCount;
-
-        public long milking_Level;
-        public long milking_genCount;
-        public float milking_genRate;
-        public long lab_Level;
-        public long lab_genCount;
-        public float lab_genRate;
-
-        public long gpcLevel;
-        public long gpcCount;
-
-        public long droneCount;
     }
 
     private void OnApplicationQuit()
@@ -358,42 +356,10 @@ public class GooGeneratorManager : MonoBehaviour
             gooCount += lab_genCount * droneCount;
         }
 
-        if (gooCount >= milkingRequirements.GetValueOrDefault(milking_Level + 1, new Tuple<long, long>(long.MaxValue, long.MaxValue)).Item1)
-        {
-            canUpgradeMilking = true;
-        }
-        else
-        {
-            canUpgradeMilking = false;
-        }
-
-
-        if (gooCount >= labRequirements.GetValueOrDefault(lab_Level + 1, new Tuple<long, long>(long.MaxValue, long.MaxValue)).Item1)
-        {
-            canUpgradeLab = true;
-        }
-        else
-        {
-            canUpgradeLab = false;
-        }
-
-        if (gooCount >= gpcRequirements.GetValueOrDefault(gpcLevel + 1, new Tuple<long, long>(long.MaxValue, long.MaxValue)).Item1)
-        {
-            canUpgradeGPC = true;
-        }
-        else
-        {
-            canUpgradeGPC = false;
-        }
-
-        if(gooCount >= conversion_Requirement)
-        {
-            canConvert = true;
-        }
-        else
-        {
-            canConvert = false;
-        }
+        canUpgradeMilking = gooCount >= milkingRequirements.GetValueOrDefault(milking_Level + 1, new Tuple<long, long>(long.MaxValue, long.MaxValue)).Item1 ? true : false;
+        canUpgradeLab = gooCount >= labRequirements.GetValueOrDefault(lab_Level + 1, new Tuple<long, long>(long.MaxValue, long.MaxValue)).Item1 ? true : false;
+        canUpgradeGPC = gooCount >= gpcRequirements.GetValueOrDefault(gpcLevel + 1, new Tuple<long, long>(long.MaxValue, long.MaxValue)).Item1 ? true : false;
+        canConvert = gooCount >= conversion_Requirement ? true : false;
     }
 
     public void OnButtonClicked()
@@ -406,14 +372,12 @@ public class GooGeneratorManager : MonoBehaviour
         if (canUpgradeMilking)
         {
             long nextLevel = milking_Level + 1;
-            if (gooCount >= milkingRequirements.GetValueOrDefault(nextLevel, new Tuple<long, long>(long.MaxValue, long.MaxValue)).Item1)
-            {
-                gooCount -= milkingRequirements[nextLevel].Item1;
-                milking_genRate = 1f;
-                milking_genCount = milkingRequirements[nextLevel].Item2;
-                milking_Level = nextLevel;
-                Debug.Log($"Generating Goo at the rate of: {milking_genCount * droneCount}/s");
-            }
+
+            gooCount -= milkingRequirements[nextLevel].Item1;
+            milking_genRate = 1f;
+            milking_genCount = milkingRequirements[nextLevel].Item2;
+            milking_Level = nextLevel;
+            Debug.Log($"Generating Goo at the rate of: {milking_genCount * droneCount}/s");
         }
         else
         {
@@ -426,14 +390,12 @@ public class GooGeneratorManager : MonoBehaviour
         if (canUpgradeLab)
         {
             long nextLevel = lab_Level + 1;
-            if (gooCount >= labRequirements.GetValueOrDefault(nextLevel, new Tuple<long, long>(long.MaxValue, long.MaxValue)).Item1)
-            {
-                gooCount -= labRequirements[nextLevel].Item1;
-                lab_genRate = 1f;
-                lab_genCount = labRequirements[nextLevel].Item2;
-                lab_Level = nextLevel;
-                Debug.Log($"Generating Goo at the rate of: {lab_genCount * droneCount}/s");
-            }
+
+            gooCount -= labRequirements[nextLevel].Item1;
+            lab_genRate = 1f;
+            lab_genCount = labRequirements[nextLevel].Item2;
+            lab_Level = nextLevel;
+            Debug.Log($"Generating Goo at the rate of: {lab_genCount * droneCount}/s");
         }
         else
         {
@@ -446,14 +408,12 @@ public class GooGeneratorManager : MonoBehaviour
         if (canUpgradeGPC)
         {
             long nextLevel = gpcLevel + 1;
-            if (gooCount >= gpcRequirements.GetValueOrDefault(nextLevel, new Tuple<long, long>(long.MaxValue, long.MaxValue)).Item1)
-            {
-                gooCount -= gpcRequirements[nextLevel].Item1;
-                canUpgradeGPC = false;
-                gpcCount = gpcRequirements[nextLevel].Item2;
-                gpcLevel = nextLevel;
-                Debug.Log($"Generating {gpcCount} Goo Per Click");
-            }
+
+            gooCount -= gpcRequirements[nextLevel].Item1;
+            canUpgradeGPC = false;
+            gpcCount = gpcRequirements[nextLevel].Item2;
+            gpcLevel = nextLevel;
+            Debug.Log($"Generating {gpcCount} Goo Per Click");
         }
         else
         {
@@ -465,24 +425,21 @@ public class GooGeneratorManager : MonoBehaviour
     {
         if (canConvert)
         {
-            if (gooCount >= conversion_Requirement)
+            gooCount -= conversion_Requirement;
+
+            // Generate a random number between 0 and 1
+            float randomValue = UnityEngine.Random.value;
+            float conversionChance_Percentage = conversionChance / 100f;
+
+            if (randomValue < conversionChance_Percentage)
             {
-                gooCount -= conversion_Requirement;
-
-                // Generate a random number between 0 and 1
-                float randomValue = UnityEngine.Random.value;
-                float conversionChance_Percentage = conversionChance / 100f;
-
-                if (randomValue < conversionChance_Percentage)
-                {
-                    // Conversion failed
-                    Debug.Log($"Drone conversion failed!\n {randomValue} < {conversionChance_Percentage}");
-                }
-                else
-                {
-                    droneCount += 1;
-                    Debug.Log($"Converted new drone. Total drone count: {droneCount}\n {randomValue} >= {conversionChance_Percentage}");
-                }
+                // Conversion failed
+                Debug.Log($"Drone conversion failed!\n {randomValue} < {conversionChance_Percentage}");
+            }
+            else
+            {
+                droneCount += 1;
+                Debug.Log($"Converted new drone. Total drone count: {droneCount}\n {randomValue} >= {conversionChance_Percentage}");
             }
         }
         else
